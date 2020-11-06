@@ -17,6 +17,8 @@
 #include "threads/palloc.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "devices/timer.h"
+#include "lib/string.h"
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
@@ -88,6 +90,7 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
+  timer_msleep(5000);
   return -1;
 }
 
@@ -195,7 +198,7 @@ struct Elf32_Phdr
 #define PF_W 2          /* Writable. */
 #define PF_R 4          /* Readable. */
 
-static bool setup_stack (void **esp);
+static bool setup_stack (void **esp, char *arguments);
 static bool validate_segment (const struct Elf32_Phdr *, struct file *);
 static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
                           uint32_t read_bytes, uint32_t zero_bytes,
@@ -220,6 +223,12 @@ load (const char *file_name, void (**eip) (void), void **esp)
   if (t->pagedir == NULL) 
     goto done;
   process_activate ();
+  
+  char *arguments = file_name;
+
+  char *token, *save_ptr;
+  token = strtok_r (file_name, " ", &save_ptr);
+  file_name = token;
 
   /* Open executable file. */
   file = filesys_open (file_name);
@@ -302,8 +311,10 @@ load (const char *file_name, void (**eip) (void), void **esp)
     }
 
   /* Set up stack. */
-  if (!setup_stack (esp))
+  if (!setup_stack (esp, arguments))
     goto done;
+
+
 
   /* Start address. */
   *eip = (void (*) (void)) ehdr.e_entry;
@@ -427,7 +438,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 /* Create a minimal stack by mapping a zeroed page at the top of
    user virtual memory. */
 static bool
-setup_stack (void **esp) 
+setup_stack (void **esp, char *arguments) 
 {
   uint8_t *kpage;
   bool success = false;
@@ -436,8 +447,64 @@ setup_stack (void **esp)
   if (kpage != NULL) 
     {
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
-      if (success)
-        *esp = PHYS_BASE;
+      if (success) {
+        char *token, *save_ptr;
+        
+        const int INITIAL_CAPACITY = 1;
+        char **argv = malloc(INITIAL_CAPACITY * sizeof(char*)); 
+        char **argv_ptrs = malloc(INITIAL_CAPACITY * sizeof(char*));
+        int number_of_args = INITIAL_CAPACITY;
+        int args_count = 0; 
+        for (token = strtok_r (arguments, " ", &save_ptr); token != NULL;token = strtok_r (NULL, " ", &save_ptr)) {
+          argv[args_count] = token;
+          args_count+=1;
+
+          if(number_of_args < args_count) {
+            number_of_args = number_of_args * 2;  //try incrementing by 1 everytime
+
+            argv = realloc (argv, number_of_args*sizeof(char*));
+            argv_ptrs = realloc (argv_ptrs, number_of_args*sizeof(char*));
+          }
+        }
+        *esp = PHYS_BASE - 12;
+        
+        //adding arguments to stack
+        for(int i = 0;i < args_count;i++) {
+          *esp = *esp - strlen(argv[i])+1;
+          argv_ptrs[i] = *esp;
+          memcpy(*esp, argv[i], strlen(argv[i])+1);
+        }
+        
+        //adding alignment 0s if needed
+        int padding =(size_t) *esp % 4;
+        if(padding != 0) {
+          *esp = *esp - padding;
+          memcpy(*esp, 0, padding);
+        }
+
+        //adding null pointer sentinel
+        *esp = *esp - 4;
+        memcpy(*esp, 0, 4);
+
+        //adding argument pointers to stack
+        for(int i = 0;i < args_count;i++) {
+          *esp = *esp - sizeof(char*);
+          memcpy(*esp, argv_ptrs[i], sizeof(char*));
+        }
+
+        //adding address of argv[]
+        char *ptr_to_first_arg = *esp;
+        *esp = *esp - sizeof(char *);
+        memcpy(*esp, ptr_to_first_arg, sizeof(char*));
+
+        //adding argc
+        *esp = *esp - sizeof(int);
+        memcpy(*esp,args_count,sizeof(int));
+
+        //adding fake return address
+        *esp = *esp - 4;
+        memcpy(*esp, 0, 4);
+      }
       else
         palloc_free_page (kpage);
     }
