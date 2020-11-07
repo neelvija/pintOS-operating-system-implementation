@@ -470,7 +470,7 @@ setup_stack (void **esp, char *file_name,char **save_ptr)
           if(number_of_args < args_count) {
              //printf("\nrealloc called size [before] : %d",number_of_args);
             number_of_args = number_of_args * 2;  //try incrementing by 1 everytime
-             printf("realloc called size [after] : %d",number_of_args);
+             //printf("realloc called size [after] : %d",number_of_args);
              
             size_t size = number_of_args * sizeof(char*);
             argv = (char*) realloc (argv,size);  // number_of_args*sizeof(char*));
@@ -479,7 +479,6 @@ setup_stack (void **esp, char *file_name,char **save_ptr)
         }
        // printf("------- out side for loop with entries : %d-------",args_count);
 //        printf("\n");
-//	printf("%s",argv[1]);
 //	printf("\n");
   //      printf("%s",argv[2]);
            
@@ -488,8 +487,8 @@ setup_stack (void **esp, char *file_name,char **save_ptr)
 //	hex_dump(128,*esp,128,true); 
 //       hex_dump( (uintptr_t) *esp, *esp, PHYS_BASE-*esp, true);
         //adding arguments to stack
-        for(int i = 0;i < args_count;i++) {
-          printf("----------argv[%d] >>> %s",i,argv[i]);
+        for(int i = args_count-1;i >=0 ;i--) {
+          //printf("----------argv[%d] >>> %s",i,argv[i]);
           *esp = *esp - strlen(argv[i])-1;
          // printf("!!!!!!!!!");
          // printf("----------argv[%d] >>> %s",i,argv[i]);
@@ -497,13 +496,12 @@ setup_stack (void **esp, char *file_name,char **save_ptr)
           memcpy(*esp, argv[i], strlen(argv[i])+1);
           // hex_dump( (uintptr_t) *esp, *esp, PHYS_BASE-*esp, true);
         }
-         hex_dump( (uintptr_t) *esp, *esp, 128, true);
         
         //adding alignment 0s if needed
         int padding =(size_t) *esp % 4;
         if(padding != 0) {
           for (int i =0;i< padding;i++ ) {
-            char pad = '0'; 
+            char pad = 0; 
             *esp = *esp - sizeof(char);
             memcpy(*esp, &pad, sizeof(char));
           }
@@ -515,19 +513,19 @@ setup_stack (void **esp, char *file_name,char **save_ptr)
         memcpy(*esp, &null_sentinel, sizeof(int));
 
         //adding argument pointers to stack
-        for(int i = 0;i < args_count;i++) {
+        for(int i = args_count-1;i >= 0;i--) {
           *esp = *esp - sizeof(char*);
-          memcpy(*esp, argv_ptrs[i], sizeof(char*));
+          memcpy(*esp, &argv_ptrs[i], sizeof(char*));
         }
 
         //adding address of argv[]
         char *ptr_to_first_arg = *esp;
         *esp = *esp - sizeof(char *);
-        memcpy(*esp, ptr_to_first_arg, sizeof(char*));
+        memcpy(*esp, &ptr_to_first_arg, sizeof(char*));
 
         //adding argc
         *esp = *esp - sizeof(int);
-        memcpy(*esp,args_count,sizeof(int));
+        memcpy(*esp,&args_count,sizeof(int));
 
         //adding fake return address
         *esp = *esp - sizeof(int);
