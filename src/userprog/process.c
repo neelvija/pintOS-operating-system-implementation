@@ -17,6 +17,8 @@
 #include "threads/palloc.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "devices/timer.h"
+#include "lib/string.h"
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
@@ -38,6 +40,10 @@ process_execute (const char *file_name)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
 
+  char *token, *save_ptr;
+  token = strtok_r (file_name, " ", &save_ptr);
+  file_name = token;
+
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
@@ -53,12 +59,13 @@ start_process (void *file_name_)
   char *file_name = file_name_;
   struct intr_frame if_;
   bool success;
-
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
+  
+
   success = load (file_name, &if_.eip, &if_.esp);
 
   /* If load failed, quit. */
@@ -88,6 +95,7 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
+  timer_msleep(5000);
   return -1;
 }
 
@@ -195,7 +203,7 @@ struct Elf32_Phdr
 #define PF_W 2          /* Writable. */
 #define PF_R 4          /* Readable. */
 
-static bool setup_stack (void **esp);
+static bool setup_stack (void **esp, char *file_name,char **save_ptr);
 static bool validate_segment (const struct Elf32_Phdr *, struct file *);
 static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
                           uint32_t read_bytes, uint32_t zero_bytes,
@@ -220,7 +228,14 @@ load (const char *file_name, void (**eip) (void), void **esp)
   if (t->pagedir == NULL) 
     goto done;
   process_activate ();
+  
+//  memcpy(*arguments, file_name, strlen(file_name)+1);
+   
 
+  char *token, *save_ptr;
+  token = strtok_r (file_name, " ", &save_ptr);
+  file_name = token;
+  
   /* Open executable file. */
   file = filesys_open (file_name);
   if (file == NULL) 
@@ -301,9 +316,12 @@ load (const char *file_name, void (**eip) (void), void **esp)
         }
     }
 
+
   /* Set up stack. */
-  if (!setup_stack (esp))
+  if (!setup_stack (esp,file_name,save_ptr))//arguments))
     goto done;
+
+
 
   /* Start address. */
   *eip = (void (*) (void)) ehdr.e_entry;
@@ -427,17 +445,94 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 /* Create a minimal stack by mapping a zeroed page at the top of
    user virtual memory. */
 static bool
-setup_stack (void **esp) 
+setup_stack (void **esp, char *file_name,char **save_ptr) 
 {
   uint8_t *kpage;
   bool success = false;
-
+  //printf("---------- file name : %s >> save ptr : %s",file_name,save_ptr);
   kpage = palloc_get_page (PAL_USER | PAL_ZERO);
   if (kpage != NULL) 
     {
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
-      if (success)
-        *esp = PHYS_BASE;
+      if (success) {
+        char *token;
+        
+        const int INITIAL_CAPACITY = 8;
+        char **argv = malloc(INITIAL_CAPACITY * sizeof(char*)); 
+        char **argv_ptrs = malloc(INITIAL_CAPACITY * sizeof(char*));
+        int number_of_args = INITIAL_CAPACITY;
+        int args_count = 0; 
+        for (token = file_name; token != NULL;token = strtok_r (NULL, " ", &save_ptr)) {
+          argv[args_count] = token;
+	  //printf("---------token %d >> %s",args_count,token);
+          args_count+=1;
+
+          if(number_of_args < args_count) {
+             //printf("\nrealloc called size [before] : %d",number_of_args);
+            number_of_args = number_of_args * 2;  //try incrementing by 1 everytime
+             //printf("realloc called size [after] : %d",number_of_args);
+             
+            size_t size = number_of_args * sizeof(char*);
+            argv = (char*) realloc (argv,size);  // number_of_args*sizeof(char*));
+            argv_ptrs = (char*)realloc (argv_ptrs,size);        // number_of_args*sizeof(char*));
+          }
+        }
+       // printf("------- out side for loop with entries : %d-------",args_count);
+//        printf("\n");
+//	printf("\n");
+  //      printf("%s",argv[2]);
+           
+        *esp = PHYS_BASE; // - 12;
+       
+//	hex_dump(128,*esp,128,true); 
+//       hex_dump( (uintptr_t) *esp, *esp, PHYS_BASE-*esp, true);
+        //adding arguments to stack
+        for(int i = args_count-1;i >=0 ;i--) {
+          //printf("----------argv[%d] >>> %s",i,argv[i]);
+          *esp = *esp - strlen(argv[i])-1;
+         // printf("!!!!!!!!!");
+         // printf("----------argv[%d] >>> %s",i,argv[i]);
+          argv_ptrs[i] = *esp;
+          memcpy(*esp, argv[i], strlen(argv[i])+1);
+          // hex_dump( (uintptr_t) *esp, *esp, PHYS_BASE-*esp, true);
+        }
+        
+        //adding alignment 0s if needed
+        int padding =(size_t) *esp % 4;
+        if(padding != 0) {
+          for (int i =0;i< padding;i++ ) {
+            char pad = 0; 
+            *esp = *esp - sizeof(char);
+            memcpy(*esp, &pad, sizeof(char));
+          }
+        }
+
+        //adding null pointer sentinel
+        int null_sentinel = 0;
+        *esp = *esp - sizeof(int);
+        memcpy(*esp, &null_sentinel, sizeof(int));
+
+        //adding argument pointers to stack
+        for(int i = args_count-1;i >= 0;i--) {
+          *esp = *esp - sizeof(char*);
+          memcpy(*esp, &argv_ptrs[i], sizeof(char*));
+        }
+
+        //adding address of argv[]
+        char *ptr_to_first_arg = *esp;
+        *esp = *esp - sizeof(char *);
+        memcpy(*esp, &ptr_to_first_arg, sizeof(char*));
+
+        //adding argc
+        *esp = *esp - sizeof(int);
+        memcpy(*esp,&args_count,sizeof(int));
+
+        //adding fake return address
+        *esp = *esp - sizeof(int);
+        memcpy(*esp, &null_sentinel, sizeof(int));
+        free(argv);
+        free(argv_ptrs);     
+ }
       else
         palloc_free_page (kpage);
     }
