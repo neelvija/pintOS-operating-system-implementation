@@ -502,16 +502,17 @@ setup_stack (void **esp, char *file_name,char **save_ptr)
         //adding alignment 0s if needed
         int padding =(size_t) *esp % 4;
         if(padding != 0) {
-          *esp = *esp - sizeof(void*);
-          printf("padding %d", padding);
-          printf("size of %d", sizeof(void*));
-          memcpy(*esp, 0, sizeof(void*));
-          printf("padding %d", padding);
+          for (int i =0;i< padding;i++ ) {
+            char pad = '0'; 
+            *esp = *esp - sizeof(char);
+            memcpy(*esp, &pad, sizeof(char));
+          }
         }
 
         //adding null pointer sentinel
-        *esp = *esp - 4;
-        memcpy(*esp, 0, 4);
+        int null_sentinel = 0;
+        *esp = *esp - sizeof(int);
+        memcpy(*esp, &null_sentinel, sizeof(int));
 
         //adding argument pointers to stack
         for(int i = 0;i < args_count;i++) {
@@ -529,8 +530,8 @@ setup_stack (void **esp, char *file_name,char **save_ptr)
         memcpy(*esp,args_count,sizeof(int));
 
         //adding fake return address
-        *esp = *esp - sizeof(void*);
-        memcpy(*esp, 0, sizeof(void*));
+        *esp = *esp - sizeof(int);
+        memcpy(*esp, &null_sentinel, sizeof(int));
         free(argv);
         free(argv_ptrs);     
  }
