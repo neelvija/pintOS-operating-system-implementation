@@ -105,7 +105,7 @@ process_exit (void)
 {
   struct thread *cur = thread_current ();
   uint32_t *pd;
-
+//  msg("In proc exit!!!!!!!!!!!!!!!!!!!!!!!!!111111");
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = cur->pagedir;
@@ -457,7 +457,7 @@ setup_stack (void **esp, char *file_name,char **save_ptr)
       if (success) {
         char *token;
         
-        const int INITIAL_CAPACITY = 8;
+        const int INITIAL_CAPACITY = 25;
         char **argv = malloc(INITIAL_CAPACITY * sizeof(char*)); 
         char **argv_ptrs = malloc(INITIAL_CAPACITY * sizeof(char*));
         int number_of_args = INITIAL_CAPACITY;
@@ -482,7 +482,7 @@ setup_stack (void **esp, char *file_name,char **save_ptr)
 //	printf("\n");
   //      printf("%s",argv[2]);
            
-        *esp = PHYS_BASE; // - 12;
+        *esp = PHYS_BASE;// - 12;
        
 //	hex_dump(128,*esp,128,true); 
 //       hex_dump( (uintptr_t) *esp, *esp, PHYS_BASE-*esp, true);

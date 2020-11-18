@@ -98,7 +98,7 @@ struct thread
     uint32_t *pagedir;                  /* Page directory. */
     int exit_status;                    // thread exit status
     struct thread *parent;                        //parent of current thread if any
-    struct list_elem child_threads_list     //list of the child threads
+    struct list_elem child_threads_list;     //list of the child threads
 #endif
 
     /* Owned by thread.c. */
