@@ -8,9 +8,9 @@
 
 >> Fill in the names and email addresses of your group members.
 
-FirstName LastName <email@domain.example>
-FirstName LastName <email@domain.example>
-FirstName LastName <email@domain.example>
+Mrunal Inge <mrunalna@buffalo.edu>
+Neel Dungrani <neelvija@buffalo.edu >
+
 
 ---- PRELIMINARIES ----
 
@@ -36,13 +36,33 @@ FirstName LastName <email@domain.example>
 >> you arrange for the elements of argv[] to be in the right order?
 >> How do you avoid overflowing the stack page?
 
+1) We implemented args passing by tokeninzing the incoming argument and separating filename/instruction and arguments in process_execute().
+2) After separting the filename and arguments, we push arguments one by one onto the stack. 
+3) Add appropriate padding since the arguments address must be a multiple of four.
+4) Then we add null sentinel to separate addresses of arguments and actual arguments.
+5) Then we push the addresses of arguments on the stack in the same order as the arguments.
+6) Then we add the address of the first address argument.
+7) Then add the number of arguments that are pushed on the stack.
+8) Then we add null sentinel as fake return address.
+9) Care must be taken that the contents of user stack must not cross PHYSBASE, since above PHYSBASE is kernel space. To ensure
+this we have subtracted length of each element from PHYSBASE before adding it to the stack.
+
 ---- RATIONALE ----
 
 >> A3: Why does Pintos implement strtok_r() but not strtok()?
+The strtok_r() function is a reentrant version strtok(). The saveptr argument is a pointer to a char * variable that is 
+used internally by strtok_r() in order to maintain context between successive calls that parse the same string. On the first
+call to strtok_r(), str should point to the string to be parsed, and the value of saveptr is ignored. In subsequent calls, 
+str should be NULL, and saveptr should be unchanged since the previous call.
 
 >> A4: In Pintos, the kernel separates commands into a executable name
 >> and arguments.  In Unix-like systems, the shell does this
 >> separation.  Identify at least two advantages of the Unix approach.
+1) Checking whether the arguments are over the
+limit.
+2) Decrease the processing time in kernel.
+3) To validate the arguments before passing it
+to kernel to avoid kernel fail. 
 
 			     SYSTEM CALLS
 			     ============
@@ -86,6 +106,8 @@ FirstName LastName <email@domain.example>
 >> paragraphs, describe the strategy or strategies you adopted for
 >> managing these issues.  Give an example.
 
+Whenever the userprogram reads the bad memory, it generates the page-fault which transfer execution flow to the kill() function in 
+exception.c. Where resources will be freed. Then we call exit syscall from there to ensure thread execution ends properly.
 ---- SYNCHRONIZATION ----
 
 >> B7: The "exec" system call returns -1 if loading the new executable
