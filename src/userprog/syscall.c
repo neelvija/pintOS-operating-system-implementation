@@ -34,12 +34,10 @@ void check_valid_pointer(void * ptr){
     }
 
     bool is_above_phys_base = is_user_vaddr (ptr);
-    //printf("------------%d----------", is_above_phys_base);
     if(!is_above_phys_base){
-	exit_process(-1);
+	    exit_process(-1);
     }
     void *is_mapped_ptr = pagedir_get_page(thread_current()->pagedir, ptr);
-    //printf("======%d@@@@@@@@@@@@", is_mapped_ptr);
     if(ptr == NULL || !is_above_phys_base || is_mapped_ptr == NULL){
        exit_process(-1);
     }
@@ -77,8 +75,7 @@ syscall_handler (struct intr_frame *f UNUSED)
       int *arg1 = esp_pointer + 1;
       int *arg2 = esp_pointer + 2;
       int *arg3 = esp_pointer + 3;
-  //    read_arguments_from_stack(esp_pointer,3,&arguments);
-    //  printf("Before buffer!!!!");
+      
       check_valid_pointer(arg1);
       check_valid_pointer(arg2);
       check_valid_pointer(*arg2);

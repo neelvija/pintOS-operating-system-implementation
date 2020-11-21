@@ -105,7 +105,6 @@ process_exit (void)
 {
   struct thread *cur = thread_current ();
   uint32_t *pd;
-//  msg("In proc exit!!!!!!!!!!!!!!!!!!!!!!!!!111111");
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = cur->pagedir;
@@ -449,7 +448,6 @@ setup_stack (void **esp, char *file_name,char **save_ptr)
 {
   uint8_t *kpage;
   bool success = false;
-  //printf("---------- file name : %s >> save ptr : %s",file_name,save_ptr);
   kpage = palloc_get_page (PAL_USER | PAL_ZERO);
   if (kpage != NULL) 
     {
@@ -460,41 +458,19 @@ setup_stack (void **esp, char *file_name,char **save_ptr)
         const int INITIAL_CAPACITY = 25;
         char **argv = malloc(INITIAL_CAPACITY * sizeof(char*)); 
         char **argv_ptrs = malloc(INITIAL_CAPACITY * sizeof(char*));
-        int number_of_args = INITIAL_CAPACITY;
         int args_count = 0; 
         for (token = file_name; token != NULL;token = strtok_r (NULL, " ", &save_ptr)) {
           argv[args_count] = token;
-	  //printf("---------token %d >> %s",args_count,token);
           args_count+=1;
-
-          if(number_of_args < args_count) {
-             //printf("\nrealloc called size [before] : %d",number_of_args);
-            number_of_args = number_of_args * 2;  //try incrementing by 1 everytime
-             //printf("realloc called size [after] : %d",number_of_args);
-             
-            size_t size = number_of_args * sizeof(char*);
-            argv = (char*) realloc (argv,size);  // number_of_args*sizeof(char*));
-            argv_ptrs = (char*)realloc (argv_ptrs,size);        // number_of_args*sizeof(char*));
-          }
         }
-       // printf("------- out side for loop with entries : %d-------",args_count);
-//        printf("\n");
-//	printf("\n");
-  //      printf("%s",argv[2]);
            
         *esp = PHYS_BASE;// - 12;
        
-//	hex_dump(128,*esp,128,true); 
-//       hex_dump( (uintptr_t) *esp, *esp, PHYS_BASE-*esp, true);
         //adding arguments to stack
         for(int i = args_count-1;i >=0 ;i--) {
-          //printf("----------argv[%d] >>> %s",i,argv[i]);
           *esp = *esp - strlen(argv[i])-1;
-         // printf("!!!!!!!!!");
-         // printf("----------argv[%d] >>> %s",i,argv[i]);
           argv_ptrs[i] = *esp;
           memcpy(*esp, argv[i], strlen(argv[i])+1);
-          // hex_dump( (uintptr_t) *esp, *esp, PHYS_BASE-*esp, true);
         }
         
         //adding alignment 0s if needed
