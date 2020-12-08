@@ -6,6 +6,7 @@
 #include "threads/vaddr.h"
 #include "devices/shutdown.h"
 #include "filesys/filesys.h"
+#include "filesys/file.h"
 #include "threads/synch.h"
 
 
@@ -100,8 +101,9 @@ int read (int fd, void *buffer, unsigned length) {
   if(fd == 0) {
     lock_acquire(&filesys_lock);
     int i;
-    for(i = 0; i < size; ++i) {
-      *(char*)(buffer + i) = input_getc();
+    uint8_t *buf = (uint8_t *) buffer;
+    for(i = 0; i < size; i++) {
+      buf[i] = input_getc();
     }
     lock_release(&filesys_lock);
     return i;
@@ -181,109 +183,109 @@ syscall_handler (struct intr_frame *f UNUSED)
         break;
 
       case SYS_WRITE: ;
-        int *arg1 = esp_pointer + 1;
-        int *arg2 = esp_pointer + 2;
-        int *arg3 = esp_pointer + 3;
+        int *arg1_write = esp_pointer + 1;
+        int *arg2_write = esp_pointer + 2;
+        int *arg3_write = esp_pointer + 3;
     
-        check_valid_pointer(arg1);
-        check_valid_pointer(arg2);
-        check_valid_pointer(*arg2);
-        check_valid_pointer(arg3);
-        f->eax = write(*(arg1),*(arg2),*(arg3));
+        check_valid_pointer(arg1_write);
+        check_valid_pointer(arg2_write);
+        check_valid_pointer(*arg2_write);
+        check_valid_pointer(arg3_write);
+        f->eax = write(*(arg1_write),*(arg2_write),*(arg3_write));
         break;
 
-      case SYS_READ:
-        int *arg1 = esp_pointer + 1;
-        int *arg2 = esp_pointer + 2;
-        int *arg3 = esp_pointer + 3;
+      case SYS_READ: ;
+        int *arg1_read = esp_pointer + 1;
+        int *arg2_read = esp_pointer + 2;
+        int *arg3_read = esp_pointer + 3;
     
-        check_valid_pointer(arg1);
-        check_valid_pointer(arg2);
-        //check_valid_pointer(*arg2);
-        check_valid_pointer(arg3);
-        f->eax = write(*(arg1),*(arg2),*(arg3));
+        check_valid_pointer(arg1_read);
+        check_valid_pointer(arg2_read);
+        check_valid_pointer(*arg2_read);
+        check_valid_pointer(arg3_read);
+        f->eax = read(*(arg1_read),(void *)*(esp_pointer + 2),*(arg3_read));
         break;
 
-      case SYS_FILESIZE:
-        int *arg1 = esp_pointer + 1;
-        check_valid_pointer(arg1);
-        int fd = *(esp_pointer + 1);
+      case SYS_FILESIZE: ;
+        int *arg1_filesize = esp_pointer + 1;
+        check_valid_pointer(arg1_filesize);
+        int fd_filesize = *(esp_pointer + 1);
         
         lock_acquire(&filesys_lock);
-        struct file *file = thread_get_file_struct(fd);
-        if(file){
-          f->eax = file_length(file);
+        struct file *file_filesize = thread_get_file_struct(fd_filesize);
+        if(file_filesize){
+          f->eax = file_length(file_filesize);
         } else {
           f->eax = -1;
         }
         lock_release(&filesys_lock);
         break;      
       
-      case SYS_REMOVE:
-        int *arg1 = esp_pointer + 1;
-        check_valid_pointer(arg1);
-        char *file_name = (char *) *(esp_pointer + 1);
-        check_valid_pointer (file_name);
+      case SYS_REMOVE: ;
+        int *arg1_remove = esp_pointer + 1;
+        check_valid_pointer(arg1_remove);
+        char *file_name_remove = (char *) *(esp_pointer + 1);
+        check_valid_pointer (file_name_remove);
         
         lock_acquire(&filesys_lock); 
-        f->eax = filesys_remove (file_name);
+        f->eax = filesys_remove (file_name_remove);
         lock_release(&filesys_lock);
         break;
 
-      case SYS_CREATE:
-        int *arg1 = esp_pointer + 1;
-        int *arg2 = esp_pointer + 2;
-        check_valid_pointer(arg1);
-        check_valid_pointer(arg2);
-        char *file_name = (char *) *(esp_pointer + 1);
-        check_valid_pointer (file_name);
+      case SYS_CREATE: ;
+        int *arg1_create = esp_pointer + 1;
+        int *arg2_create = esp_pointer + 2;
+        check_valid_pointer(arg1_create);
+        check_valid_pointer(arg2_create);
+        char *file_name_create = (char *) *(esp_pointer + 1);
+        check_valid_pointer (file_name_create);
         
         lock_acquire(&filesys_lock); 
-        f->eax = filesys_create (file_name,*(esp_pointer + 2));
+        f->eax = filesys_create (file_name_create,*(esp_pointer + 2));
         lock_release(&filesys_lock);
         break;
 
-      case SYS_OPEN:
-        int *arg1 = esp_pointer + 1;
-        check_valid_pointer(arg1);
-        const char *file = (char *) *(esp_pointer + 1);
-        check_valid_pointer (file);
-        f->eax = file_open_syscall(file);
+      case SYS_OPEN: ;
+        int *arg1_open = esp_pointer + 1;
+        check_valid_pointer(arg1_open);
+        const char *file_name_open = (char *) *(esp_pointer + 1);
+        check_valid_pointer (file_name_open);
+        f->eax = file_open_syscall(file_name_open);
         break;
 
-      case SYS_CLOSE:
-        int *arg1 = esp_pointer + 1;
-        check_valid_pointer(arg1);
-        int fd = *(esp_pointer + 1);
-        file_close_syscall(fd);
+      case SYS_CLOSE: ;
+        int *arg1_close = esp_pointer + 1;
+        check_valid_pointer(arg1_close);
+        int fd_close = *(esp_pointer + 1);
+        file_close_syscall(fd_close);
         break;
 
-      case SYS_TELL:
-        int *arg1 = esp_pointer + 1;
-        check_valid_pointer(arg1);
-        int fd = *(esp_pointer + 1);
+      case SYS_TELL: ;
+        int *arg1_tell = esp_pointer + 1;
+        check_valid_pointer(arg1_tell);
+        int fd_tell = *(esp_pointer + 1);
         lock_acquire(&filesys_lock);
-        struct file *file = thread_get_file_struct(fd);
-        if(file){
-          f->eax = file_tell(file);
+        struct file *file_struct_tell = thread_get_file_struct(fd_tell);
+        if(file_struct_tell){
+          f->eax = file_tell(file_struct_tell);
         } else {
           f->eax = -1;
         }
         lock_release(&filesys_lock);
         break;
       
-      case SYS_SEEK:
-        int *arg1 = esp_pointer + 1;
-        int *arg2 = esp_pointer + 2;
-        check_valid_pointer(arg1);
-        check_valid_pointer(arg2);
-        int fd = *(esp_pointer + 1);
+      case SYS_SEEK: ;
+        int *arg1_seek = esp_pointer + 1;
+        int *arg2_seek = esp_pointer + 2;
+        check_valid_pointer(arg1_seek);
+        check_valid_pointer(arg2_seek);
+        int fd_seek = *(esp_pointer + 1);
 
         lock_acquire(&filesys_lock);
-        struct file *file = thread_get_file_struct(fd);
-        if(file){
+        struct file *file_struct_seek = thread_get_file_struct(fd_seek);
+        if(file_struct_seek){
           //unsigned position = (unsigned) *(esp_pointer + 2);
-          file_seek(fd,*(esp_pointer + 2));
+          file_seek(fd_seek,*(esp_pointer + 2));
         }
         lock_release(&filesys_lock);
         break;
