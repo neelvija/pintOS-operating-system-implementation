@@ -4,6 +4,7 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
+#include "userprog/syscall.h"
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -97,11 +98,16 @@ struct thread
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
     int exit_status;                    // thread exit status
-    struct thread *parent;                        //parent of current thread if any
-    struct list_elem child_threads_list;     //list of the child threads
+    
 #endif
+
     struct list open_files;
     int fd;
+
+    struct thread *parent;                   //parent of current thread if any
+    struct list_elem child_threads_list;     //list of the child threads
+    struct child_process_struct* child_process;
+    int load_status; // flag value to notify parent about child's load status
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */

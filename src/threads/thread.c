@@ -11,6 +11,7 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
+#include "userprog/syscall.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
@@ -22,6 +23,7 @@
 
 /* initial fd value for each thread is 2 since 0 and 1 are reserved */ 
 #define INITIAL_FD 2
+#define INITIAL_LOAD_STATUS 0
 
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
@@ -150,6 +152,16 @@ thread_print_stats (void)
           idle_ticks, kernel_ticks, user_ticks);
 }
 
+struct child_process* add_child_to_list (int pid)
+{
+  struct child_process_struct *cp = malloc(sizeof(struct child_process_struct));
+  cp->child_pid = pid;
+  cp->load_status = 0;
+  sema_init(&cp->load_semaphore, 0);
+  list_push_back(&thread_current()->child_threads_list, &cp->child_elem);
+  return cp;
+}
+
 /* Creates a new kernel thread named NAME with the given initial
    PRIORITY, which executes FUNCTION passing AUX as the argument,
    and adds it to the ready queue.  Returns the thread identifier
@@ -201,14 +213,15 @@ thread_create (const char *name, int priority,
   sf->eip = switch_entry;
   sf->ebp = 0;
 
-//  t->parent = thread_current();
-//  list_push_back(child_threads_list, t);
+  t->parent = thread_current();
+  t->child_process = add_child_to_list(t->tid);
 
   /* Add to run queue. */
   thread_unblock (t);
 
   return tid;
 }
+
 
 /* Puts the current thread to sleep.  It will not be scheduled
    again until awoken by thread_unblock().
@@ -471,7 +484,9 @@ init_thread (struct thread *t, const char *name, int priority)
   t->magic = THREAD_MAGIC;
 
   list_init(&t->open_files);
+  list_init(&t->child_threads_list);
   t->fd = INITIAL_FD;
+  t->load_status = INITIAL_LOAD_STATUS;
 
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
