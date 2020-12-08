@@ -334,6 +334,14 @@ syscall_handler (struct intr_frame *f UNUSED)
         }
         lock_release(&filesys_lock);
         break;
+      case SYS_EXEC: ;
+        int *arg1_exec = esp_pointer + 1;
+        check_valid_pointer(arg1_exec);
+        lock_acquire(&filesys_lock);
+        f->eax = syscall_exec(*(arg1_exec));
+        lock_release(&filesys_lock);
+      break;
+      
 
       default:
         exit_process(-1);
