@@ -67,7 +67,11 @@ start_process (void *file_name_)
   
 
   success = load (file_name, &if_.eip, &if_.esp);
+  // if(success) {
 
+  // } else {
+
+  // }
   /* If load failed, quit. */
   palloc_free_page (file_name);
   if (!success) 
@@ -105,7 +109,6 @@ process_exit (void)
 {
   struct thread *cur = thread_current ();
   uint32_t *pd;
-//  msg("In proc exit!!!!!!!!!!!!!!!!!!!!!!!!!111111");
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = cur->pagedir;

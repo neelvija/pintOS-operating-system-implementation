@@ -100,6 +100,8 @@ struct thread
     struct thread *parent;                        //parent of current thread if any
     struct list_elem child_threads_list;     //list of the child threads
 #endif
+    struct list open_files;
+    int fd;
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
