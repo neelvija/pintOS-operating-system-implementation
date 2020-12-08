@@ -65,13 +65,19 @@ start_process (void *file_name_)
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
   
+  
 
   success = load (file_name, &if_.eip, &if_.esp);
-  // if(success) {
+  struct child_process_struct *child_process = thread_current()->child_process;
+   if(success) {
+      child_process->load_status = 1;
 
-  // } else {
+   } else {
+     child_process->load_status = -1;
 
-  // }
+   }
+
+   sema_up(&child_process->load_semaphore);
   /* If load failed, quit. */
   palloc_free_page (file_name);
   if (!success) 

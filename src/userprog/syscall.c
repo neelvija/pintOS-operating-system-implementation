@@ -8,6 +8,11 @@
 #include "filesys/filesys.h"
 #include "filesys/file.h"
 #include "threads/synch.h"
+#include "userprog/process.h"
+#include "devices/input.h"
+#include "threads/malloc.h"
+#include "user/syscall.h"
+
 
 
 
@@ -118,6 +123,46 @@ int read (int fd, void *buffer, unsigned length) {
     lock_release(&filesys_lock);
   }
   return size;
+}
+
+struct child_process_struct* find_child_process(int pid)
+{
+  struct child_process_struct *cp = NULL;
+  struct thread *current_thread = thread_current();  
+  for (struct list_elem *e = list_begin(&current_thread->child_threads_list); e != list_end(&current_thread->child_threads_list); e = list_next(e))
+  {
+    cp = list_entry(e, struct child_process_struct, child_elem);
+    if (pid == cp->child_pid)
+    {
+      break;
+    }
+  }
+  return cp;
+}
+
+pid_t
+syscall_exec(const char* cmdline)
+{
+    pid_t pid = process_execute(cmdline);
+    struct child_process_struct *child_process = find_child_process(pid);
+    if (child_process)
+    {
+      /* check if process if loaded */
+      if (child_process->load_status == 0)
+      {
+        sema_down(&child_process->load_semaphore);
+      }
+      /* check if process failed to load */
+      if (child_process->load_status == -1)
+      {
+        list_remove(&child_process->child_elem);
+        free(child_process);
+        pid = -1;
+      }
+    } else {
+      pid = -1;
+    }
+    return pid;
 }
 
 int file_open_syscall (const char *file) {
