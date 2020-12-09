@@ -148,9 +148,10 @@ syscall_exec(const char* cmdline)
     if (child_process)
     {
       /* check if process if loaded */
-      if (child_process->load_status == 0)
+      while (child_process->load_status == 0)
       {
-        sema_down(&child_process->load_semaphore);
+        barrier();
+        //sema_down(&child_process->load_semaphore);
       }
       /* check if process failed to load */
       if (child_process->load_status == -1)
