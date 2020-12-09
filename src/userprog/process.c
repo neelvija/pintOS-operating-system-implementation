@@ -19,7 +19,7 @@
 #include "threads/vaddr.h"
 #include "devices/timer.h"
 #include "lib/string.h"
-
+#include "userprog/syscall.h"
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
 
@@ -80,8 +80,10 @@ start_process (void *file_name_)
    sema_up(&child_process->load_semaphore);
   /* If load failed, quit. */
   palloc_free_page (file_name);
-  if (!success) 
+  if (!success) {
     thread_exit ();
+//      exit_process(-1);
+	}
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in

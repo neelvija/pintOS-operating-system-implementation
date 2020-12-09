@@ -132,9 +132,10 @@ struct child_process_struct* find_child_process(int pid)
   for (struct list_elem *e = list_begin(&current_thread->child_threads_list); e != list_end(&current_thread->child_threads_list); e = list_next(e))
   {
     cp = list_entry(e, struct child_process_struct, child_elem);
+//    printf("%d : %d  :child pid ", cp->child_pid, pid);
     if (pid == cp->child_pid)
     {
-      break;
+      break;     
     }
   }
   return cp;
@@ -150,8 +151,7 @@ syscall_exec(const char* cmdline)
       /* check if process if loaded */
       while (child_process->load_status == 0)
       {
-        barrier();
-        //sema_down(&child_process->load_semaphore);
+        sema_down(&child_process->load_semaphore);
       }
       /* check if process failed to load */
       if (child_process->load_status == -1)
@@ -161,6 +161,7 @@ syscall_exec(const char* cmdline)
         pid = -1;
       }
     } else {
+  //    printf("could not find child");
       pid = -1;
     }
     return pid;
@@ -338,9 +339,9 @@ syscall_handler (struct intr_frame *f UNUSED)
       case SYS_EXEC: ;
         int *arg1_exec = esp_pointer + 1;
         check_valid_pointer(arg1_exec);
-        lock_acquire(&filesys_lock);
+       // lock_acquire(&filesys_lock);
         f->eax = syscall_exec(*(arg1_exec));
-        lock_release(&filesys_lock);
+       // lock_release(&filesys_lock);
       break;
       
 
