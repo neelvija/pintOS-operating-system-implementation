@@ -37,13 +37,47 @@ syscall_init (void)
   lock_init(&filesys_lock);
 }
 
+struct child_process_struct* find_child_process(int pid, struct thread * thread_parent)
+{
+  struct child_process_struct *cp = NULL;
+  struct thread *current_thread = thread_parent;  
+  for (struct list_elem *e = list_begin(&current_thread->child_threads_list); e != list_end(&current_thread->child_threads_list); e = list_next(e))
+  {
+    cp = list_entry(e, struct child_process_struct, child_elem);
+//    printf("%d : %d  :child pid ", cp->child_pid, pid);
+    if (pid == cp->child_pid)
+    {
+      break;     
+    }
+  }
+  return cp;
+}
+
+void remove_all_child_processes(struct thread *thread_parent)
+{
+  struct child_process_struct *cp = NULL;
+  struct thread *current_thread = thread_parent;  
+  for (struct list_elem *e = list_begin(&current_thread->child_threads_list); e != list_end(&current_thread->child_threads_list); e = list_next(e))
+  {
+    cp = list_entry(e, struct child_process_struct, child_elem);
+    list_remove(&cp->child_elem);
+    free(cp);
+    
+  }
+  //return cp;
+}
 void exit_process (int status){
  // printf("%d",status);
   printf("%s: exit(%d)\n", thread_current()->name, status);
   //will be used in wait mostly. According to doc we need to return the exit status to the parent if any waiting for the thread
-   thread_current()->exit_status = status;
-
-  thread_exit();
+ //  thread_current()->exit_status = status;
+  struct thread * parent_thread = thread_current()->parent;
+  struct child_process_struct *child_process = find_child_process(thread_current()->tid, parent_thread);
+  child_process->exit_status = status;
+  child_process->is_exited =1;
+  remove_all_child_processes(thread_current());
+  file_close_syscall(-1, true);
+ thread_exit();
 }
 
 
@@ -125,27 +159,13 @@ int read (int fd, void *buffer, unsigned length) {
   return size;
 }
 
-struct child_process_struct* find_child_process(int pid)
-{
-  struct child_process_struct *cp = NULL;
-  struct thread *current_thread = thread_current();  
-  for (struct list_elem *e = list_begin(&current_thread->child_threads_list); e != list_end(&current_thread->child_threads_list); e = list_next(e))
-  {
-    cp = list_entry(e, struct child_process_struct, child_elem);
-//    printf("%d : %d  :child pid ", cp->child_pid, pid);
-    if (pid == cp->child_pid)
-    {
-      break;     
-    }
-  }
-  return cp;
-}
+
 
 pid_t
 syscall_exec(const char* cmdline)
 {
     pid_t pid = process_execute(cmdline);
-    struct child_process_struct *child_process = find_child_process(pid);
+    struct child_process_struct *child_process = find_child_process(pid, thread_current());
     if (child_process)
     {
       /* check if process if loaded */
@@ -156,8 +176,8 @@ syscall_exec(const char* cmdline)
       /* check if process failed to load */
       if (child_process->load_status == -1)
       {
-        list_remove(&child_process->child_elem);
-        free(child_process);
+        //list_remove(&child_process->child_elem);
+       // free(child_process);
         pid = -1;
       }
     } else {
@@ -187,24 +207,32 @@ int file_open_syscall (const char *file) {
   return status;
 }
 
-void file_close_syscall(int fd) {
+void file_close_syscall(int fd, bool close_all_files) {
   lock_acquire(&filesys_lock);
-
+  
   struct thread *current_thread = thread_current();
 	struct list_elem *current_file_descriptor;
 
   for(current_file_descriptor = list_begin (&current_thread->open_files); current_file_descriptor != list_end (&current_thread->open_files); current_file_descriptor = list_next (current_file_descriptor))
 	{
 		struct file_descriptor *f_desc = list_entry (current_file_descriptor, struct file_descriptor, file_elem);
-		if (fd == f_desc->fd)
+		if (fd == f_desc->fd || close_all_files)
 		{
 			file_close(f_desc->file_struct);
       list_remove(&f_desc->file_elem);
       free(f_desc);
-      break;
+      if(!close_all_files){
+        break;
+      }
 		}
 	}
   lock_release(&filesys_lock);
+}
+
+int syscall_wait(pid_t pid){
+
+  return process_wait(pid);
+   
 }
 
 static void
@@ -304,7 +332,7 @@ syscall_handler (struct intr_frame *f UNUSED)
         int *arg1_close = esp_pointer + 1;
         check_valid_pointer(arg1_close);
         int fd_close = *(esp_pointer + 1);
-        file_close_syscall(fd_close);
+        file_close_syscall(fd_close,false);
         break;
 
       case SYS_TELL: ;
@@ -343,6 +371,14 @@ syscall_handler (struct intr_frame *f UNUSED)
         f->eax = syscall_exec(*(arg1_exec));
        // lock_release(&filesys_lock);
       break;
+      case SYS_WAIT: ;
+        int *arg1_wait = esp_pointer + 1;
+        check_valid_pointer(arg1_wait);
+        f->eax = syscall_wait(*arg1_wait);
+        
+      break;
+
+
       
 
       default:

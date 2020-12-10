@@ -20,6 +20,7 @@
 #include "devices/timer.h"
 #include "lib/string.h"
 #include "userprog/syscall.h"
+#include "threads/synch.h"
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
 
@@ -107,8 +108,20 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
-  timer_msleep(5000);
-  return -1;
+  struct child_process_struct *child_process = find_child_process(thread_current()->tid, thread_current());
+
+  if(child_process->is_waited_on == 1){
+     return -1;
+  }
+  while(child_process->is_exited ==0){
+    barrier();
+  }
+    child_process->is_waited_on =1;
+  return child_process->exit_status; 
+
+
+  //timer_msleep(5000);
+  //return -1;
 }
 
 /* Free the current process's resources. */

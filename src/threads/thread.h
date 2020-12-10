@@ -105,7 +105,7 @@ struct thread
     int fd;
 
     struct thread *parent;                   //parent of current thread if any
-    struct list_elem child_threads_list;     //list of the child threads
+    struct list child_threads_list;     //list of the child threads
     struct child_process_struct* child_process;
     int load_status; // flag value to notify parent about child's load status
 
