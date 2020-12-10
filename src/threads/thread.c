@@ -152,7 +152,7 @@ thread_print_stats (void)
           idle_ticks, kernel_ticks, user_ticks);
 }
 
-struct child_process* add_child_to_list (int pid)
+struct child_process_struct* add_child_to_list (int pid)
 {
   struct child_process_struct *cp = malloc(sizeof(struct child_process_struct));
   cp->child_pid = pid;

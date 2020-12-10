@@ -33,7 +33,7 @@ process_execute (const char *file_name)
 {
   char *fn_copy;
   tid_t tid;
-
+//  printf("command line %s", file_name);
   /* Make a copy of FILE_NAME.
      Otherwise there's a race between the caller and load(). */
   fn_copy = palloc_get_page (0);
@@ -42,7 +42,7 @@ process_execute (const char *file_name)
   strlcpy (fn_copy, file_name, PGSIZE);
 
   char *token, *save_ptr;
-  token = strtok_r (file_name, " ", &save_ptr);
+  token = strtok_r ((char*) file_name, " ", &save_ptr);
   file_name = token;
 
   /* Create a new thread to execute FILE_NAME. */
@@ -109,7 +109,9 @@ int
 process_wait (tid_t child_tid UNUSED) 
 {
   struct child_process_struct *child_process = find_child_process(thread_current()->tid, thread_current());
-
+   if(child_process == NULL){
+    return -1;
+  }
   if(child_process->is_waited_on == 1){
      return -1;
   }
@@ -117,6 +119,7 @@ process_wait (tid_t child_tid UNUSED)
     barrier();
   }
     child_process->is_waited_on =1;
+//  printf("%d exit status", child_process->exit_status);
   return child_process->exit_status; 
 
 
