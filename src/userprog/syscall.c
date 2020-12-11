@@ -124,14 +124,15 @@ int write (int fd, const void *buffer, unsigned length){
      putbuf(buffer,length);
     // lock_release(&filesys_lock);
      return length;
-  } else {
+  }  
+else {
    // lock_acquire(&filesys_lock);
 
     struct file *file = thread_get_file_struct(fd);
     if(file) {
       size = file_write(file,buffer,length);
     } else {
-      size = -1;
+      size = 0;
     }
    // lock_release(&filesys_lock);
   }
