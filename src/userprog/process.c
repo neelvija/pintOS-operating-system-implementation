@@ -42,11 +42,10 @@ process_execute (const char *file_name)
   strlcpy (fn_copy, file_name, PGSIZE);
 
   char *token, *save_ptr;
-  token = strtok_r ((char*) file_name, " ", &save_ptr);
-  file_name = token;
-
+  token = strtok_r (file_name, " ", &save_ptr);
+  //file_name = token;
   /* Create a new thread to execute FILE_NAME. */
-  tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
+  tid = thread_create (token, PRI_DEFAULT, start_process,fn_copy );
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy); 
   return tid;
@@ -108,7 +107,7 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
-  struct child_process_struct *child_process = find_child_process(thread_current()->tid, thread_current());
+  struct child_process_struct *child_process = find_child_process(child_tid, thread_current());
    if(child_process == NULL){
     return -1;
   }
@@ -357,7 +356,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
 
  done:
   /* We arrive here whether the load is successful or not. */
-  file_close (file);
+  //file_close (file);
   return success;
 }
 

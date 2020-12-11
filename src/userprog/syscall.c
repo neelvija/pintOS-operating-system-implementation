@@ -270,7 +270,13 @@ syscall_handler (struct intr_frame *f UNUSED)
         check_valid_pointer(arg2_write);
         check_valid_pointer(*arg2_write);
         check_valid_pointer(arg3_write);
-        f->eax = write(*(arg1_write),*(arg2_write),*(arg3_write));
+        //printf("write switch case\n");
+        lock_acquire(&filesys_lock);
+        //printf("write lock acquired\n");
+        f->eax = write(*(arg1_write),(void *)*(arg2_write),*(arg3_write));
+        //printf("write done : %d\n",f->eax);
+        lock_release(&filesys_lock);
+        //printf("write lock released\n");
         break;
 
       case SYS_READ: ;
@@ -282,7 +288,14 @@ syscall_handler (struct intr_frame *f UNUSED)
         check_valid_pointer(arg2_read);
         check_valid_pointer(*arg2_read);
         check_valid_pointer(arg3_read);
+        //printf("read switch case\n");
+        lock_acquire(&filesys_lock);
+        //printf("read lock acquired\n");
         f->eax = read(*(arg1_read),(void *)*(esp_pointer + 2),*(arg3_read));
+        //printf("read done with %d\n",f->eax);
+        
+        lock_release(&filesys_lock);
+        //printf("read lock released\n");
         break;
 
       case SYS_FILESIZE: ;
@@ -297,7 +310,7 @@ syscall_handler (struct intr_frame *f UNUSED)
         } else {
           f->eax = -1;
         }
-       // lock_release(&filesys_lock);
+        //lock_release(&filesys_lock);
         break;      
       
       case SYS_REMOVE: ;
@@ -306,9 +319,9 @@ syscall_handler (struct intr_frame *f UNUSED)
         char *file_name_remove = (char *) *(esp_pointer + 1);
         check_valid_pointer (file_name_remove);
         
-        //lock_acquire(&filesys_lock); 
+        lock_acquire(&filesys_lock); 
         f->eax = filesys_remove (file_name_remove);
-       // lock_release(&filesys_lock);
+        lock_release(&filesys_lock);
         break;
 
       case SYS_CREATE: ;
@@ -319,9 +332,9 @@ syscall_handler (struct intr_frame *f UNUSED)
         char *file_name_create = (char *) *(esp_pointer + 1);
         check_valid_pointer (file_name_create);
         
-       // lock_acquire(&filesys_lock); 
+        //lock_acquire(&filesys_lock); 
         f->eax = filesys_create (file_name_create,*(esp_pointer + 2));
-      //  lock_release(&filesys_lock);
+        //lock_release(&filesys_lock);
         break;
 
       case SYS_OPEN: ;
@@ -329,14 +342,18 @@ syscall_handler (struct intr_frame *f UNUSED)
         check_valid_pointer(arg1_open);
         const char *file_name_open = (char *) *(esp_pointer + 1);
         check_valid_pointer (file_name_open);
+        lock_acquire(&filesys_lock);
         f->eax = file_open_syscall(file_name_open);
+        lock_release(&filesys_lock);
         break;
 
       case SYS_CLOSE: ;
         int *arg1_close = esp_pointer + 1;
         check_valid_pointer(arg1_close);
         int fd_close = *(esp_pointer + 1);
+        lock_acquire(&filesys_lock);
         file_close_syscall(fd_close,false);
+        lock_release(&filesys_lock);
         break;
 
       case SYS_TELL: ;
@@ -350,7 +367,7 @@ syscall_handler (struct intr_frame *f UNUSED)
         } else {
           f->eax = -1;
         }
-      //  lock_release(&filesys_lock);
+        //lock_release(&filesys_lock);
         break;
       
       case SYS_SEEK: ;
@@ -360,26 +377,28 @@ syscall_handler (struct intr_frame *f UNUSED)
         check_valid_pointer(arg2_seek);
         int fd_seek = *(esp_pointer + 1);
 
-        //lock_acquire(&filesys_lock);
+        lock_acquire(&filesys_lock);
         struct file *file_struct_seek = thread_get_file_struct(fd_seek);
         if(file_struct_seek){
           //unsigned position = (unsigned) *(esp_pointer + 2);
-          file_seek(fd_seek,*(esp_pointer + 2));
+          file_seek(file_struct_seek,*(esp_pointer + 2));
         }
-       // lock_release(&filesys_lock);
+       lock_release(&filesys_lock);
         break;
       case SYS_EXEC: ;
         int *arg1_exec = esp_pointer + 1;
         check_valid_pointer(arg1_exec);
 	check_valid_pointer(*arg1_exec);
-       // lock_acquire(&filesys_lock);
-        f->eax = syscall_exec(*(arg1_exec));
-       // lock_release(&filesys_lock);
+        lock_acquire(&filesys_lock);
+        f->eax = syscall_exec((char *)*(arg1_exec));
+        lock_release(&filesys_lock);
       break;
       case SYS_WAIT: ;
         int *arg1_wait = esp_pointer + 1;
         check_valid_pointer(arg1_wait);
+        //lock_acquire(&filesys_lock);
         f->eax = syscall_wait(*arg1_wait);
+        //lock_release(&filesys_lock);
         
       break;
 
