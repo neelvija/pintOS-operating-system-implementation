@@ -78,6 +78,8 @@ void exit_process (int status){
   struct child_process_struct *child_process = find_child_process(thread_current()->tid, parent_thread);
   child_process->exit_status = status;
   child_process->is_exited =1;
+if(thread_current()->executable_file)
+  file_close(thread_current()->executable_file);
   remove_all_child_processes(thread_current());
  file_close_syscall(-1, true);
  thread_exit();
@@ -132,7 +134,7 @@ else {
     if(file) {
       size = file_write(file,buffer,length);
     } else {
-      size = 0;
+      size = -1;
     }
    // lock_release(&filesys_lock);
   }

@@ -100,7 +100,7 @@ struct thread
     int exit_status;                    // thread exit status
     
 #endif
-
+    struct file *executable_file;
     struct list open_files;
     int fd;
 

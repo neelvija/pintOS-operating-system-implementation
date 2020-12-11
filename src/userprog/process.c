@@ -73,7 +73,7 @@ start_process (void *file_name_)
   struct child_process_struct *child_process = thread_current()->child_process;
    if(success) {
       child_process->load_status = 1;
-
+     
    } else {
      child_process->load_status = -1;
 
@@ -357,6 +357,10 @@ load (const char *file_name, void (**eip) (void), void **esp)
   success = true;
 
  done:
+  if(success){
+	 file_deny_write(file);
+	 thread_current()->executable_file = file;
+   }
   /* We arrive here whether the load is successful or not. */
   //file_close (file);
   return success;
