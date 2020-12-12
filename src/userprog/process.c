@@ -79,7 +79,7 @@ start_process (void *file_name_)
 
    }
 
-   sema_up(&child_process->load_semaphore);
+   //sema_up(&child_process->load_semaphore);
   /* If load failed, quit. */
   palloc_free_page (file_name);
   if (!success) {
@@ -360,7 +360,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
   if(success){
 	 file_deny_write(file);
 	 thread_current()->executable_file = file;
-   }
+   } else { file_close(file);}
   /* We arrive here whether the load is successful or not. */
   //file_close (file);
   return success;
@@ -499,15 +499,15 @@ setup_stack (void **esp, char *file_name,char **save_ptr)
 	  //printf("---------token %d >> %s",args_count,token);
           args_count+=1;
 
-          if(number_of_args < args_count) {
+          //if(number_of_args < args_count) {
              //printf("\nrealloc called size [before] : %d",number_of_args);
-            number_of_args = number_of_args * 2;  //try incrementing by 1 everytime
+          //  number_of_args = number_of_args * 2;  //try incrementing by 1 everytime
              //printf("realloc called size [after] : %d",number_of_args);
              
-            size_t size = number_of_args * sizeof(char*);
-            argv = (char*) realloc (argv,size);  // number_of_args*sizeof(char*));
-            argv_ptrs = (char*)realloc (argv_ptrs,size);        // number_of_args*sizeof(char*));
-          }
+          //  size_t size = number_of_args * sizeof(char*);
+           // argv = (char*) realloc (argv,size);  // number_of_args*sizeof(char*));
+           // argv_ptrs = (char*)realloc (argv_ptrs,size);        // number_of_args*sizeof(char*));
+         // }
         }
        // printf("------- out side for loop with entries : %d-------",args_count);
 //        printf("\n");

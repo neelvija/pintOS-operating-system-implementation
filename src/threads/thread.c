@@ -160,7 +160,7 @@ struct child_process_struct* add_child_to_list (int pid)
   cp->exit_status = 0;
   cp->is_exited =0;
   cp->is_waited_on =0;
-  sema_init(&cp->load_semaphore, 0);
+  //sema_init(&cp->load_semaphore, 0);
   list_push_back(&thread_current()->child_threads_list, &cp->child_elem);
   return cp;
 }

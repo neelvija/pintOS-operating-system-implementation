@@ -82,6 +82,7 @@ if(thread_current()->executable_file)
   file_close(thread_current()->executable_file);
   remove_all_child_processes(thread_current());
  file_close_syscall(-1, true);
+ if(lock_held_by_current_thread (&filesys_lock)) lock_release(&filesys_lock);
  thread_exit();
 }
 
@@ -100,7 +101,6 @@ void check_valid_pointer(void * ptr){
     if(ptr == NULL || !is_above_phys_base || is_mapped_ptr == NULL){
        exit_process(-1);
     }
-
 }
 
 struct file* thread_get_file_struct (int fd) {
@@ -177,7 +177,8 @@ syscall_exec(const char* cmdline)
       /* check if process if loaded */
       while (child_process->load_status == 0)
       {
-        sema_down(&child_process->load_semaphore);
+        //sema_down(&child_process->load_semaphore);
+        barrier();
       }
       /* check if process failed to load */
       if (child_process->load_status == -1)

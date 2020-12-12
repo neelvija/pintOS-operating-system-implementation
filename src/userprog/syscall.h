@@ -12,7 +12,7 @@ struct child_process_struct {
     int child_pid;
     int load_status;
     struct list_elem child_elem;
-    struct semaphore load_semaphore;
+    //struct semaphore load_semaphore;
     int is_waited_on;
     int exit_status;
     int is_exited;
