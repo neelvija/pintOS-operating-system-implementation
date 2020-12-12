@@ -117,7 +117,8 @@ process_wait (tid_t child_tid UNUSED)
      return -1;
   }
   while(child_process->is_exited ==0){
-    barrier();
+    //barrier();
+    thread_yield();
   }
     child_process->is_waited_on =1;
 //  printf("%d exit status", child_process->exit_status);
